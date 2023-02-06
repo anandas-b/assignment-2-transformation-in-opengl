@@ -7,6 +7,9 @@
 #include <glm/gtc/type_ptr.hpp>
 
 #include <stdio.h>
+#include <cstdlib>
+#include <stdlib.h>
+#include <time.h>
 
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
@@ -26,7 +29,7 @@ float deltaTime;
 
 int SCREEN_WIDTH = 1080;
 int SCREEN_HEIGHT = 720;
-float nP = 0.5;
+float nP = 0.1;
 float fP = 50;
 
 double prevMouseX;
@@ -41,10 +44,10 @@ const int MOUSE_TOGGLE_BUTTON = 1;
 const float MOUSE_SENSITIVITY = 0.1f;
 
 glm::vec3 bgColor = glm::vec3(0);
-float oRadius = 0.0f;
-float oSpeed = 0.0f;
-float fView = 0.0f;
-float oHeight = 0.0f;
+float oRadius = 4.0f;
+float oSpeed = 1.0f;
+float fView = 8.0f;
+float oHeight = 5.0f;
 bool oToggle = false;
 
 namespace ew {
@@ -114,7 +117,7 @@ struct Transform {
 };
 
 struct Camera {
-	glm::vec3 position = glm::vec3(5, 5, 5);
+	glm::vec3 position = glm::vec3(0, 0, 5);
 	glm::vec3 target = glm::vec3(0);
 	float fov = 0.0;
 	float orthographicSize = 0.0;
@@ -125,27 +128,27 @@ struct Camera {
 
 		glm::vec3 oForward = glm::normalize((position - target));
 		glm::vec3 oRight = glm::normalize(cross(up, oForward));
-		glm::vec3 oUp = glm::cross(oForward, oRight);
+		glm::vec3 oUp = cross(oForward, oRight);
+
+		//oForward *= -1;
 
 		glm::mat4 rCam = {
 			oRight.x, oUp.x, oForward.x, 0,
 			oRight.y, oUp.y, oForward.y, 0,
 			oRight.z, oUp.z, oForward.z, 0,
+			0, 0, 0, 1
+		};
+
+		glm::mat4 tCam = {
+			1, 0, 0, 0,
+			0, 1, 0, 0,
+			0, 0, 1, 0,
 			(position.x * -1), (position.y * -1), (position.z * -1), 1
 		};
 
-		//glm::mat4 tCam = {
-		//	1, 0, 0, 0,
-		//	0, 1, 0, 0,
-		//	0, 0, 1, 0,
-		//	(position.x * -1), (position.y * -1), (position.z * -1), 1
-		//};
+		glm::mat4 vmx = rCam * tCam;
 
-		//glm::mat4 vmx = rCam * tCam;
-
-		//return vmx;
-
-		return rCam;
+		return vmx;
 	}
 
 	glm::mat4 getProjectionMatrix() {
@@ -179,7 +182,7 @@ struct Camera {
 	}
 
 	glm::mat4 perspective() {
-		float c = tan(glm::radians(fov) / 2);
+		float c = glm::tan(glm::radians(fov) / 2);
 		float aR = (SCREEN_HEIGHT / SCREEN_WIDTH);
 
 		glm::mat4 psp = {
@@ -242,6 +245,26 @@ int main() {
 	glEnable(GL_DEPTH_TEST);
 	glDepthFunc(GL_LESS);
 
+	// delcare a random seed
+	srand(time(NULL));
+
+	// create a random scale, rotation, and translation for each cube
+	for (size_t i = 0; i < NUM_CUBES; i++)
+	{
+		float scale = rand() % 5 + 1;
+
+		float rotX = rand() % 10 + 1;
+		float rotY = rand() % 10 + 1;
+		float rotZ = rand() % 10 + 1;
+
+		float transX = rand() % 5 + 1;
+		float transY = rand() % 5 + 1;
+		float transZ = rand() % 5 + 1;
+
+		transforms[i].position = glm::vec3(transX, transY, transZ);
+		transforms[i].rotation = glm::vec3(rotX, rotY, rotZ);
+		transforms[i].scale = glm::vec3(scale);
+	}
 
 	while (!glfwWindowShouldClose(window)) {
 		glClearColor(bgColor.r,bgColor.g,bgColor.b, 1.0f);
@@ -255,25 +278,21 @@ int main() {
 		deltaTime = time - lastFrameTime;
 		lastFrameTime = time;
 
-		cam.position = glm::vec3(5, 5, 5);
-
 		//Draw
 		for (size_t i = 0; i < NUM_CUBES; i++)
 		{
-			cam.position.x = oRadius * (glm::cos(oSpeed * time));
-			cam.position.z = oRadius * (glm::sin(oSpeed * time));
+			cam.position.x = oRadius * (glm::sin(oSpeed * time));
+			cam.position.z = oRadius * (glm::cos(oSpeed * time));
 			cam.fov = fView;
 
 			cam.orthographicSize = oHeight;
 			cam.orthographic = oToggle;
-			shader.use();
 
-			glm::mat4 total = glm::mat4(1);
-			total *= transforms[i].getModelMatrix();
-			total *= cam.getViewMatrix();
-			total *= cam.getProjectionMatrix();
-			//shader.setMat4("_Model", transforms[i].getModelMatrix());
-			shader.setMat4("iTotal", total);
+			shader.use();
+			shader.setMat4("_Projection", cam.getProjectionMatrix());
+			shader.setMat4("_View", cam.getViewMatrix());
+			shader.setMat4("_Model", transforms[i].getModelMatrix());
+
 			cubeMesh.draw();
 		}
 
