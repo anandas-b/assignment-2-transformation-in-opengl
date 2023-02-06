@@ -29,6 +29,7 @@ float deltaTime;
 
 int SCREEN_WIDTH = 1080;
 int SCREEN_HEIGHT = 720;
+float aspectRatio = 1.5;
 float nP = 0.1;
 float fP = 50;
 
@@ -46,8 +47,8 @@ const float MOUSE_SENSITIVITY = 0.1f;
 glm::vec3 bgColor = glm::vec3(0);
 float oRadius = 4.0f;
 float oSpeed = 1.0f;
-float fView = 8.0f;
-float oHeight = 5.0f;
+float fView = 100.0f;
+float oHeight = 7.0f;
 bool oToggle = false;
 
 namespace ew {
@@ -165,8 +166,7 @@ struct Camera {
 	}
 
 	glm::mat4 ortho() {
-		float w = orthographicSize * (SCREEN_HEIGHT / SCREEN_WIDTH);
-		float r = w / 2;
+		float r = orthographicSize / 2 * aspectRatio;
 		float t = orthographicSize / 2;
 		float l = -r;
 		float b = -t;
@@ -183,10 +183,9 @@ struct Camera {
 
 	glm::mat4 perspective() {
 		float c = glm::tan(glm::radians(fov) / 2);
-		float aR = (SCREEN_HEIGHT / SCREEN_WIDTH);
 
 		glm::mat4 psp = {
-			(1 / (aR * c)), 0, 0, 0,
+			(1 / (aspectRatio * c)), 0, 0, 0,
 			0, (1 / c), 0, 0,
 			0, 0, ((fP + nP) / (fP - nP) * -1), -1,
 			0, 0, ((2 * fP * nP) / (fP - nP) * -1), 1
@@ -257,13 +256,14 @@ int main() {
 		float rotY = rand() % 10 + 1;
 		float rotZ = rand() % 10 + 1;
 
-		float transX = rand() % 5 + 1;
-		float transY = rand() % 5 + 1;
-		float transZ = rand() % 5 + 1;
+		float transX = (rand() % 10) - 5;
+		float transY = (rand() % 10) - 5;
+		float transZ = (rand() % 10) - 5;
 
 		transforms[i].position = glm::vec3(transX, transY, transZ);
 		transforms[i].rotation = glm::vec3(rotX, rotY, rotZ);
 		transforms[i].scale = glm::vec3(scale);
+
 	}
 
 	while (!glfwWindowShouldClose(window)) {
@@ -300,7 +300,7 @@ int main() {
 		ImGui::Begin("Settings");
 		ImGui::SliderFloat("Orbit Radius", &oRadius, 0.0f, 10.0f);
 		ImGui::SliderFloat("Orbit Speed", &oSpeed, 0.0f, 10.0f);
-		ImGui::SliderFloat("Field of View", &fView, 0.0f, 10.0f);
+		ImGui::SliderFloat("Field of View", &fView, 20.0f, 150.0f);
 		ImGui::SliderFloat("Orthographic Height", &oHeight, 0.0f, 10.0f);
 		ImGui::Checkbox("Orthographic Toggle", &oToggle);
 		ImGui::End();
